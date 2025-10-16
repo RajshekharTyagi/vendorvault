@@ -1,0 +1,130 @@
+vendorvault/
+│
+├── .env.local                    # Supabase keys, API URLs, etc.
+├── next.config.mjs
+├── package.json
+├── postcss.config.js
+├── tailwind.config.ts
+├── tsconfig.json
+├── README.md
+│
+├── public/
+│   ├── favicon.ico
+│   ├── vendorvault-logo.svg
+│   └── illustrations/
+│       └── empty-state.svg
+│
+├── src/
+│   ├── app/
+│   │   ├── (auth)/
+│   │   │   ├── login/
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── LoginForm.tsx
+│   │   │   │   └── AuthCard.tsx
+│   │   │   └── layout.tsx
+│   │   │
+│   │   ├── (dashboard)/
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx                # Vendor dashboard (default)
+│   │   │   ├── vendors/
+│   │   │   │   ├── page.tsx            # All vendors (Admin)
+│   │   │   │   └── [id]/
+│   │   │   │       ├── page.tsx        # Vendor detail
+│   │   │   │       ├── Documents.tsx
+│   │   │   │       ├── Checklist.tsx
+│   │   │   │       └── ActivityLog.tsx
+│   │   │   ├── documents/
+│   │   │   │   ├── page.tsx            # File upload + view for vendors
+│   │   │   ├── checklist/
+│   │   │   │   ├── page.tsx            # Compliance checklist view
+│   │   │   ├── ai-assistant/
+│   │   │   │   ├── page.tsx            # Chat interface (RAG)
+│   │   │   ├── settings/
+│   │   │   │   ├── page.tsx
+│   │   │   └── admin/
+│   │   │       ├── page.tsx            # Admin dashboard
+│   │   │       ├── Users.tsx
+│   │   │       ├── Roles.tsx
+│   │   │       └── Permissions.tsx
+│   │   │
+│   │   ├── api/
+│   │   │   ├── vendors/
+│   │   │   │   ├── route.ts            # POST /api/vendors
+│   │   │   │   └── [id]/checklist/
+│   │   │   │       └── route.ts        # POST /api/vendors/:id/checklist
+│   │   │   ├── files/
+│   │   │   │   └── route.ts            # File upload handler
+│   │   │   ├── ai/
+│   │   │   │   └── route.ts            # AI chat + RAG API
+│   │   │   └── auth/
+│   │   │       ├── login/
+│   │   │       │   └── route.ts
+│   │   │       ├── signup/
+│   │   │       │   └── route.ts
+│   │   │       └── user/
+│   │   │           └── route.ts
+│   │   │
+│   │   ├── layout.tsx
+│   │   └── globals.css
+│   │
+│   ├── components/
+│   │   ├── ui/                        # Reusable ShadCN components
+│   │   │   ├── button.tsx
+│   │   │   ├── card.tsx
+│   │   │   ├── input.tsx
+│   │   │   ├── modal.tsx
+│   │   │   ├── badge.tsx
+│   │   │   ├── table.tsx
+│   │   │   ├── progress.tsx
+│   │   │   └── toast.tsx
+│   │   │
+│   │   ├── layout/
+│   │   │   ├── Navbar.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   ├── MobileNav.tsx
+│   │   │   └── ThemeToggle.tsx
+│   │   │
+│   │   ├── dashboard/
+│   │   │   ├── VendorCard.tsx
+│   │   │   ├── FileUpload.tsx
+│   │   │   ├── ChecklistCard.tsx
+│   │   │   └── AIChatPreview.tsx
+│   │   │
+│   │   └── forms/
+│   │       ├── VendorForm.tsx
+│   │       ├── DocumentUploadForm.tsx
+│   │       └── RoleForm.tsx
+│   │
+│   ├── hooks/
+│   │   ├── useSupabase.ts
+│   │   ├── useAuth.ts
+│   │   ├── useToast.ts
+│   │   └── usePermissions.ts
+│   │
+│   ├── lib/
+│   │   ├── supabaseClient.ts           # Supabase initialization
+│   │   ├── auth.ts                     # Auth helpers
+│   │   ├── ai.ts                       # AI integration (RAG/OpenRouter)
+│   │   ├── storage.ts                  # File handling with Supabase storage
+│   │   ├── permissions.ts              # Role + Permission utilities
+│   │   ├── constants.ts                # Global constants
+│   │   └── utils.ts                    # General helpers
+│   │
+│   ├── styles/
+│   │   ├── theme.css                   # Tailwind variables / overrides
+│   │   └── animations.css              # Custom animations
+│   │
+│   ├── types/
+│   │   ├── vendor.ts
+│   │   ├── document.ts
+│   │   ├── checklist.ts
+│   │   ├── user.ts
+│   │   └── ai.ts
+│   │
+│   └── data/
+│       ├── checklistTemplate.ts        # Default checklist template
+│       └── seed.ts                     # Demo data (optional)
+│
+└── supabase/
+    ├── migrations/                     # SQL migration files
+    └── schema.sql                      # Base schema definition

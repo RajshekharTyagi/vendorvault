@@ -1,0 +1,208 @@
+🏗️ VendorVault – Database Design (Supabase)
+
+Your app will have 8 core tables + 2 RAG tables + 1 system table for logs.
+
+🧩 1️⃣ users
+
+Stores registered users (admins, auditors, vendors).
+
+Column	Type	Description
+id	uuid (PK)	Unique ID (auto from Supabase Auth)
+email	text	User email
+full_name	text	Display name
+role_id	uuid (FK → roles.id)	User’s role
+created_at	timestamp	Creation date
+updated_at	timestamp	Last update
+
+Notes:
+
+You’ll use Supabase Auth for login.
+
+On signup, you insert the user in this table with role = vendor by default.
+
+🧠 2️⃣ roles
+
+Defines user roles for RBAC (Role-Based Access Control).
+
+Column	Type	Description
+id	uuid (PK)	Role ID
+name	text	Role name (admin, vendor, auditor)
+description	text	Role description
+created_at	timestamp	Added date
+
+Example Data
+
+id	name	description
+1	admin	Full access
+2	vendor	Limited to own data
+3	auditor	Read-only access
+🔐 3️⃣ permissions
+
+Defines specific app-level actions (optional but clean design).
+
+Column	Type	Description
+id	uuid (PK)	Permission ID
+name	text	upload_document, view_vendor, approve_checklist
+description	text	Human-readable description
+🧩 4️⃣ role_permissions
+
+Join table to map which roles have which permissions.
+
+Column	Type	Description
+role_id	uuid (FK → roles.id)	Role reference
+permission_id	uuid (FK → permissions.id)	Permission reference
+🏢 5️⃣ vendors
+
+Stores core vendor profiles — the main entity of VendorVault.
+
+Column	Type	Description
+id	uuid (PK)	Vendor ID
+name	text	Vendor name
+contact_email	text	Vendor contact
+category	text	e.g., IT, Finance, Logistics
+status	text	active, pending, suspended
+created_by	uuid (FK → users.id)	Who created this vendor
+created_at	timestamp	Created date
+updated_at	timestamp	Last update
+📄 6️⃣ documents
+
+Stores uploaded files for each vendor (compliance evidence, certificates, etc.).
+
+Column	Type	Description
+id	uuid (PK)	Document ID
+vendor_id	uuid (FK → vendors.id)	Vendor owner
+uploaded_by	uuid (FK → users.id)	Who uploaded
+name	text	File name
+file_url	text	Supabase Storage path
+file_type	text	pdf, docx, png
+status	text	uploaded, verified, rejected
+expires_on	date	Optional expiration date
+remarks	text	Notes or audit feedback
+created_at	timestamp	Upload date
+☑️ 7️⃣ checks (Compliance Checklist)
+
+Tracks the status of compliance items per vendor.
+
+Column	Type	Description
+id	uuid (PK)	Checklist ID
+vendor_id	uuid (FK → vendors.id)	Vendor reference
+check_name	text	e.g., “ISO 27001 Certification”
+status	text	pending, approved, rejected
+evidence_url	text	Optional link to uploaded document
+checked_by	uuid (FK → users.id)	Who validated
+comments	text	Reviewer notes
+due_date	date	Renewal or due date
+created_at	timestamp	Created date
+📅 8️⃣ renewals
+
+Helps track expiring documents or compliance renewals.
+
+Column	Type	Description
+id	uuid (PK)	Renewal ID
+vendor_id	uuid (FK → vendors.id)	Vendor reference
+document_id	uuid (FK → documents.id)	Linked document
+renewal_date	date	Next renewal date
+status	text	upcoming, completed, overdue
+reminder_sent	boolean	Auto reminder flag
+created_at	timestamp	Created date
+🧠 RAG Integration Tables
+
+These power your AI Retrieval-Augmented Generation flow.
+
+🧾 9️⃣ ai_embeddings
+
+Stores chunked text + embedding vectors for semantic search.
+
+Column	Type	Description
+id	uuid (PK)	Embedding ID
+vendor_id	uuid (FK → vendors.id)	Vendor reference
+document_id	uuid (FK → documents.id)	Which file it came from
+chunk_text	text	Extracted text snippet
+embedding	vector(1536)	Vector embedding
+created_at	timestamp	Date added
+💬 🔟 ai_threads (or qa_threads)
+
+Stores AI queries, answers, and metadata for chat history.
+
+Column	Type	Description
+id	uuid (PK)	Thread ID
+vendor_id	uuid (FK → vendors.id)	Vendor context
+user_id	uuid (FK → users.id)	Who asked
+question	text	User query
+answer	text	LLM-generated response
+context_docs	jsonb	Which docs were referenced
+created_at	timestamp	Created date
+⚙️ 1️⃣1️⃣ system_logs (optional)
+
+Tracks important app actions — useful for audits and debugging.
+
+Column	Type	Description
+id	uuid (PK)	Log ID
+user_id	uuid (FK → users.id)	Who performed the action
+action	text	e.g., upload_document, update_vendor
+entity_type	text	vendor, document, check
+entity_id	uuid	Target entity ID
+timestamp	timestamp	When it happened
+details	jsonb	Extra metadata (file size, role, etc.)
+🔗 Relationships Overview
+users (1) ────< vendors (n)
+users (1) ────< documents (n)
+vendors (1) ────< documents (n)
+vendors (1) ────< checks (n)
+vendors (1) ────< renewals (n)
+documents (1) ────< ai_embeddings (n)
+vendors (1) ────< ai_threads (n)
+roles (1) ────< users (n)
+roles (1) ────< role_permissions (n)
+permissions (1) ────< role_permissions (n)
+
+🧱 Example Data Flow
+
+1️⃣ Admin adds vendor → inserts into vendors
+2️⃣ Vendor uploads documents → entries in documents
+3️⃣ OCR extracts text → embeddings go into ai_embeddings
+4️⃣ AI queries use embeddings → results stored in ai_threads
+5️⃣ Compliance checklist updates → records in checks
+6️⃣ Renewal reminders → managed in renewals
+7️⃣ Every user action → logged in system_logs
+
+🔒 Supabase Security (RLS)
+
+Enable Row-Level Security for privacy:
+
+Vendors can only see their own data (vendor_id = auth.uid()).
+
+Admins bypass restrictions.
+
+AI tables restricted by vendor_id.
+
+🧠 Schema Summary (Quick View)
+Table	Purpose
+users	Registered users
+roles	Role definitions
+permissions	App permissions
+role_permissions	Role–permission mapping
+vendors	Vendor profiles
+documents	Uploaded files
+checks	Compliance checklist
+renewals	Renewal reminders
+ai_embeddings	Vectorized text chunks
+ai_threads	Q&A chat history
+system_logs	Action logs
+🚀 Bonus: Edge Functions You’ll Add
+Function	Purpose
+generate_embeddings	Extract text + create vectors on upload
+send_renewal_reminders	Auto email before expiry
+verify_document	AI-assisted document validation
+sync_roles	Auto-create user role on signup
+💡 In Short
+
+Your database is the spine of VendorVault:
+
+Organized around vendors as the central entity.
+
+Clean relationships for users, documents, and compliance checks.
+
+Extensible with RAG tables for AI-based intelligence.
+
+Secured with RLS and scalable via Supabase’s edge functions.

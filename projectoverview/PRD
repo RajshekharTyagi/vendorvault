@@ -1,0 +1,183 @@
+🧾 Product Requirements Document (PRD)
+📘 Project Name: VendorVault
+🧠 Category: Compliance & Vendor Management System
+👤 Owner: [Your Name]
+🏗️ Tech Stack: Next.js 14, Tailwind CSS, ShadCN UI, TypeScript, Supabase (DB + Auth + Storage + Vector DB + Edge Functions), OpenRouter API, Vercel (Deployment)
+🏁 1. Project Overview
+
+VendorVault is a modern, AI-powered vendor compliance management web application.
+It enables organizations to manage vendor documentation, run compliance checklists, track renewals, and maintain audit trails — all in one secure, beautifully designed platform.
+
+The system guides vendors through document uploads, automatically validates compliance, and provides admins with visibility into pending renewals, missing documents, and risk gaps.
+
+Core Philosophy:
+
+“Simplify vendor compliance through automation, clarity, and intelligent workflows.”
+
+🌟 2. Objectives
+Goal	Description
+🧩 Centralize Vendor Compliance	One place for all vendor profiles, documents, and checklists.
+⚙️ Automate Manual Tasks	Reduce time spent manually verifying document uploads and checklists.
+🧠 Leverage AI	Use OpenRouter + pgvector for document understanding and quick Q&A.
+🔐 Enhance Security	Use Supabase Auth and RLS policies for data access.
+💡 Deliver Delightful UX	Smooth onboarding, real-time updates, modern UI (ShadCN + Tailwind).
+🔍 3. Target Users
+Role	Description	Permissions
+Admin	Compliance or procurement officer	Manage vendors, create checklists, view analytics
+Vendor	External supplier uploading documents	Upload docs, complete compliance steps
+Auditor	External or internal reviewer	Read-only access to audit data
+Manager	Department head monitoring vendor performance	Read dashboards, get renewal alerts
+🧱 4. Core Features (1–10)
+#	Feature	Description
+1	User Authentication	Secure login/signup via Supabase Auth (email & magic link).
+2	Role-based Access Control	Admin, Vendor, Auditor roles via Supabase policies.
+3	Vendor Management	Add/edit vendor info, categories, contacts, risk levels.
+4	Guided Document Uploads	Step-by-step vendor onboarding for submitting documents.
+5	Compliance Checklist	Dynamic checklist per vendor (completed ✅ or pending ⏳).
+6	Renewal Tracking	Automatic reminders for expiring certificates or contracts.
+7	Evidence Links	Upload or link proofs of compliance from Supabase Storage.
+8	Activity Logs	Track who uploaded what and when, for audit history.
+9	AI Compliance Assistant	AI Q&A on uploaded policies/documents (OpenRouter + pgvector).
+10	Dashboard & Analytics	Vendor stats, completion rates, and upcoming renewals.
+🧩 5. Optional / Advanced Features (11–13)
+#	Feature	Description
+11	Document OCR (Tesseract)	Auto-extract data from scanned PDFs/images.
+12	AI-Powered Insights	Generate vendor risk summaries using LLMs (OpenRouter).
+13	Report Generation (PDF Export)	Generate compliance reports for management.
+🧰 6. Integrations
+Integration	Purpose
+Supabase Auth	Authentication & Role-based Access
+Supabase Database	Store vendor, checklist, document metadata
+Supabase Storage	File uploads (certificates, contracts, proofs)
+Supabase pgvector	Semantic embedding for document Q&A
+OpenRouter (LLM)	AI Q&A, summaries, compliance insights
+Tesseract.js	OCR for scanned documents
+pdf-lib	PDF parsing and export
+Vercel	CI/CD and hosting
+🧮 7. Core Database Schema (Simplified)
+Table	Columns	Description
+users	id, name, email, role	Supabase auth users
+vendors	id, name, contact_email, category, risk_level	Vendor metadata
+documents	id, vendor_id, file_url, type, status, expiry_date	Vendor documents
+checklists	id, vendor_id, item, status, notes	Compliance checklist items
+activity_logs	id, user_id, action, target_id, created_at	User actions trail
+ai_embeddings	id, document_id, embedding_vector	Vectorized document data
+renewals	id, vendor_id, due_date, status	Track renewals
+💻 8. API Endpoints (Internal)
+Endpoint	Method	Purpose
+/api/vendors	POST	Add new vendor
+/api/vendors	GET	Fetch all vendors
+/api/vendors/:id/checklist	POST	Update vendor compliance checklist
+/api/files	POST	Upload file to Supabase Storage
+/api/ai/query	POST	Ask AI about a document
+/api/renewals	GET	Fetch upcoming renewals
+/api/auth/login	POST	Handle login/signup
+🎨 9. UI/UX Flow
+1️⃣ Login Page
+
+Clean card layout with brand logo.
+
+Email-based login (Supabase magic link).
+
+Redirects based on role (admin → dashboard, vendor → upload page).
+
+2️⃣ Admin Dashboard
+
+Summary cards: total vendors, compliant vendors, pending renewals.
+
+“Add Vendor” button opens ShadCN modal.
+
+Quick search and filter (by risk, category, compliance).
+
+3️⃣ Vendor Dashboard
+
+Vendor uploads documents (drag & drop).
+
+Real-time upload progress bar.
+
+Checklist view with “mark as complete” toggle.
+
+4️⃣ Compliance Checklist Page
+
+Accordion layout for sections (e.g., Certifications, Policies).
+
+ShadCN checkboxes with tooltips.
+
+Progress bar at top.
+
+5️⃣ AI Assistant Panel
+
+Chat UI on the right side of the dashboard.
+
+Type “What’s missing in Vendor ABC’s compliance?” → get instant answer.
+
+6️⃣ Renewal Page
+
+Table with expiry dates, color-coded status (✅ Green / 🟡 Warning / 🔴 Expired).
+
+Auto notifications (Supabase edge functions).
+
+7️⃣ Settings Page
+
+Manage roles, permissions, and account info.
+
+🎯 10. Success Metrics
+Metric	Goal
+Vendor onboarding time	< 5 minutes
+Checklist completion rate	> 90%
+AI query latency	< 3 seconds
+Upload success rate	100%
+User satisfaction (UI/UX feedback)	> 4.5/5
+🧭 11. User Journey Summary
+
+1️⃣ Admin logs in → lands on dashboard → adds vendors.
+2️⃣ Vendor receives invite → logs in → uploads required docs.
+3️⃣ System auto-checks checklist (AI + rules).
+4️⃣ Renewal reminders → email + dashboard alerts.
+5️⃣ Admin views compliance report → downloads PDF summary.
+
+🎨 12. Design Philosophy
+
+ShadCN UI → polished, minimalist, Apple-level visual consistency.
+
+Tailwind CSS → custom theme: soft gray background, accent indigo highlights.
+
+Framer Motion → page transitions, checklist progress animation.
+
+Lucide Icons → simple and elegant for visual cues.
+
+🚀 13. Deployment Plan
+Step	Description
+1. Dev Setup	Initialize project in Kiro IDE using Next.js + TypeScript template.
+2. Supabase Setup	Create tables, roles, and storage buckets.
+3. UI Components	Add ShadCN UI (npx shadcn-ui init).
+4. Auth Integration	Connect Supabase Auth with middleware.
+5. CRUD APIs	Build /api/vendors and /api/checklist endpoints.
+6. AI Integration	Connect OpenRouter and vector DB.
+7. Testing	Local test on localhost:3000.
+8. Deploy	Push to GitHub → Deploy to Vercel with linked Supabase project.
+🧑‍💻 14. Future Enhancements
+
+Multi-organization support
+
+Audit packet export (ZIP + JSON)
+
+AI-powered policy gap detection
+
+Webhooks for vendor status changes
+
+Integration with Slack/Email notifications
+
+🪄 15. Visual Theme Reference
+Element	Style
+Primary Color	#4F46E5 (Indigo 600)
+Secondary	#E0E7FF (Indigo 100)
+Background	#F9FAFB
+Font	Inter / Poppins
+Buttons	Rounded-xl, soft shadows
+Animations	Fade-in, slide-up with Framer Motion
+✅ Summary
+
+VendorVault is your one-stop solution for simplifying vendor compliance.
+It’s clean, secure, AI-augmented, and built with a scalable modern stack.
+It delivers a polished enterprise experience — yet remains easy to build and deploy within your Vibe test timeframe.

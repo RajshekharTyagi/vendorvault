@@ -1,0 +1,185 @@
+🏢 VendorVault — Compliance Management Web App
+💡 1. What Is VendorVault?
+
+VendorVault is a Vendor Compliance and Document Management System.
+It helps companies manage vendors, collect compliance documents, and track verification checks — all in one secure dashboard.
+
+Think of it like a “digital vault” for your company’s vendor paperwork — every contract, license, audit certificate, and compliance checklist lives safely here, with role-based access and AI assistance.
+
+🎯 2. Main Goal
+
+To allow multiple users (vendors, admins) to upload, review, and manage compliance documents with permissions, storage, and AI-based validation.
+
+👤 3. User Roles
+Role	Permissions	Access
+Admin	✅ Full access	Can create vendors, assign tasks, approve/reject documents, manage users
+Vendor	🔒 Limited access	Can log in, upload documents, view their own compliance checklist, see feedback
+🔑 4. Core Features (Aligned with Test Requirements)
+#	Feature	Description
+1	Database creation	Create tables: users, vendors, documents, checks
+2	Multiple tables	Properly linked entities using foreign keys
+3	Multi-user system	Admins & Vendors with Supabase Auth
+4	Admin panel	Admin dashboard to manage vendors and review uploads
+5	Admin section	/admin routes protected by middleware
+6	Roles & permissions	Controlled with Supabase RLS + Next.js middleware
+7	User-based page access	Vendors see only their content
+8	File upload	Vendors upload documents via Supabase Storage
+9	File access restriction	Only allowed users can view/download files
+10	AI element (RAG)	AI checks and answers compliance questions
+🧭 5. Workflow
+🧑‍💼 Admin Flow
+
+Logs in to VendorVault.
+
+Creates a new Vendor profile.
+
+Adds a Compliance Checklist (e.g. “Upload Tax Certificate”, “Upload License”).
+
+Reviews vendor uploads in /admin/vendor/[id].
+
+Marks documents as approved/rejected.
+
+Can chat with AI assistant to summarize compliance gaps.
+
+🧾 Vendor Flow
+
+Logs in with email/password.
+
+Sees their dashboard with checklist.
+
+Uploads compliance documents (PDF, images).
+
+Tracks approval status for each document.
+
+Gets guided instructions (“What’s missing?”) via AI chat.
+
+🧠 6. AI Element (Knowledge Base RAG)
+
+RAG (Retrieval Augmented Generation) helps the app answer compliance-related questions.
+
+Two levels you can implement:
+
+Level 1 — Static Knowledge Base
+
+Store standard compliance rules (text/markdown file).
+
+AI answers vendor/admin queries (e.g. “What documents are required for vendor onboarding?”).
+
+Use OpenRouter API (or Gemini via edge function).
+
+Embed text chunks into Supabase vectors table.
+
+Level 2 — Dynamic Knowledge Base (Optional Upgrade)
+
+Allow admins to upload new compliance policies.
+
+Extract text using Tesseract.js (OCR) if needed.
+
+AI updates vector DB and uses that data in future chats.
+
+Adds “memory” to the conversation.
+
+📊 7. Core Database Entities
+Table	Columns	Description
+users	id, email, role	Manages Auth users
+vendors	id, name, status, created_by	Stores vendor details
+documents	id, vendor_id, file_name, file_url, uploaded_by, status	Stores uploaded docs
+checks	id, vendor_id, item, status, reviewed_by	Stores checklist info
+
+All connected with foreign keys and RLS policies for data security.
+
+🧱 8. System Architecture
+Frontend (Next.js + ShadCN)
+│
+│-- Auth (Supabase)
+│-- Pages: /dashboard, /vendor/[id], /admin, /chat
+│-- Components: Upload, Tables, Checklists, ChatBot
+│
+Backend (Next.js API Routes)
+│
+│-- /api/vendors → CRUD vendor
+│-- /api/vendors/:id/checklist → checklist ops
+│-- /api/vendors/:id/upload → file upload
+│-- /api/ai/query → AI compliance Q&A
+│
+Supabase (Database + Storage + VectorDB)
+│-- Tables: users, vendors, documents, checks
+│-- Storage: compliance documents
+│-- pgvector: AI embeddings
+│-- RLS: role-based access
+│
+AI Integrations
+│-- OpenRouter / Gemini (for chat + RAG)
+│-- Tesseract.js (optional OCR)
+
+🎨 9. Design & UI Guidelines (Make It Beautiful)
+
+Use ShadCN UI + Tailwind CSS for clean, minimal design.
+
+🎨 Key Pages
+1️⃣ Login Page
+
+Center card layout with company logo
+
+ShadCN <Card> + <Input> + <Button>
+
+Supabase email/password auth
+
+2️⃣ Dashboard
+
+Sidebar navigation (Vendors, Documents, Chat)
+
+Table of vendors (ShadCN Table)
+
+“Add Vendor” button with modal
+
+3️⃣ Vendor Details
+
+Upload section (<FileUploader>)
+
+Checklist component with progress bar
+
+Approval status badges (green/red/gray)
+
+4️⃣ Admin Panel
+
+Data table with filters (pending, approved)
+
+Role-based badge
+
+Document preview modal (PDF.js viewer)
+
+5️⃣ AI Chat Page
+
+Chat bubbles using ShadCN <ScrollArea>
+
+Input box at bottom, send via /api/ai/query
+
+⚡ 10. Deployment Workflow
+
+Push code to GitHub (main branch)
+
+Connect repo to Vercel
+
+Add Supabase + OpenRouter env vars
+
+Deploy build → test live site
+
+Share your deployed URL + GitHub repo as final submission ✅
+
+🧩 11. Why VendorVault is a Great Choice
+
+✅ Covers all 10 must-have features
+✅ Uses all your chosen tools naturally (Next.js + Supabase + ShadCN)
+✅ Includes AI but not overly complex
+✅ Easy to scale or improve later
+✅ Professional use case (real-world relevance)
+
+🪄 Example Project Flow (in real use)
+
+Scenario:
+An Admin adds a new Vendor “ABC Supplies Pvt Ltd.”
+The Vendor logs in → sees checklist: “Upload Tax Certificate”, “Upload ISO License”.
+Vendor uploads 2 PDFs → Admin reviews them and marks “approved”.
+Later, Vendor asks AI Chat: “Do I still need to upload any document?”
+AI replies using checklist data + policy knowledge.
