@@ -178,23 +178,13 @@ export async function POST(request: NextRequest) {
       
       document = dbDocument;
     } catch (dbError) {
-      console.log('Database operation failed, creating mock document for demo:', dbError.message);
+      console.error('❌ Database operation failed:', dbError);
+      console.error('❌ Error details:', JSON.stringify(dbError, null, 2));
       
-      // Create a mock document for demo purposes with file content
-      document = {
-        id: Date.now(),
-        vendor_id,
-        uploaded_by: userId,
-        name,
-        file_url: fileUrl,
-        file_type,
-        file_content: fileBase64,
-        file_size: file.size,
-        status: 'uploaded',
-        expires_on: expires_on || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      return NextResponse.json(
+        { error: 'Failed to save document to database. Please check your database connection and try again.' },
+        { status: 500 }
+      );
     }
 
     // Add vendor information

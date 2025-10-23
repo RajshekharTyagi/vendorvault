@@ -21,42 +21,45 @@ export async function DELETE(
     const supabase = createSupabaseClient();
     const documentId = params.id;
 
-    // Check if user is authenticated
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      console.log('User not authenticated, allowing delete for demo');
+    // First check if document exists
+    const { data: existingDoc, error: fetchError } = await supabase
+      .from('documents')
+      .select('id, name')
+      .eq('id', documentId)
+      .single();
+
+    if (fetchError || !existingDoc) {
+      return NextResponse.json(
+        { error: 'Document not found' },
+        { status: 404 }
+      );
     }
 
-    // Try to delete from Supabase
-    try {
-      const { error: deleteError } = await supabase
-        .from('documents')
-        .delete()
-        .eq('id', documentId);
+    // Delete from database
+    const { error: deleteError } = await supabase
+      .from('documents')
+      .delete()
+      .eq('id', documentId);
 
-      if (deleteError) {
-        console.log('Database delete failed:', deleteError);
-      } else {
-        console.log('✅ Document deleted from database:', documentId);
-      }
-    } catch (dbError) {
-      console.log('Database operation failed:', dbError);
+    if (deleteError) {
+      console.error('❌ Database delete failed:', deleteError);
+      return NextResponse.json(
+        { error: 'Failed to delete document from database' },
+        { status: 500 }
+      );
     }
 
-    // Return success regardless of database operation for demo purposes
+    console.log('✅ Document deleted from database:', existingDoc.name);
     return NextResponse.json(
       { message: 'Document deleted successfully', id: documentId },
       { status: 200 }
     );
 
   } catch (error) {
-    console.error('Delete API error:', error);
-    
-    // Return success even on error for demo purposes
+    console.error('❌ Delete API error:', error);
     return NextResponse.json(
-      { message: 'Document deleted (fallback)', id: params.id },
-      { status: 200 }
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }
