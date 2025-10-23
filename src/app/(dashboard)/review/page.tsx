@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -23,27 +22,36 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Upload,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   FileText,
   Search,
   Download,
   Eye,
-  Trash2,
   CheckCircle,
   XCircle,
   Clock,
   AlertTriangle,
+  MessageSquare,
 } from 'lucide-react';
 import { Document } from '@/types';
-export default function DocumentsPage() {
+
+export default function ReviewPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
-  const [isUploading, setIsUploading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('uploaded'); // Show only pending documents by default
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null);
+  const [reviewComments, setReviewComments] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -79,84 +87,15 @@ export default function DocumentsPage() {
     }
   };
 
-
-
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    setIsUploading(true);
-    
-    for (const file of acceptedFiles) {
-      const fileId = Date.now().toString() + file.name;
-      
-      try {
-        // Simulate upload progress
-        let progress = 0;
-        const progressInterval = setInterval(() => {
-          progress += 20;
-          setUploadProgress(prev => ({ ...prev, [fileId]: Math.min(progress, 90) }));
-        }, 200);
-
-        // Create FormData for file upload
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('vendor_id', '1'); // Default vendor for demo
-        formData.append('name', file.name);
-        formData.append('file_type', file.type);
-
-        // Upload to API
-        const response = await fetch('/api/documents', {
-          method: 'POST',
-          body: formData,
-        });
-
-        clearInterval(progressInterval);
-        setUploadProgress(prev => ({ ...prev, [fileId]: 100 }));
-
-        if (response.ok) {
-          const newDocument = await response.json();
-          
-          // Add the new document to the list
-          setDocuments(prev => [newDocument, ...prev]);
-          
-          console.log('✅ Document uploaded successfully:', newDocument.name);
-        } else {
-          console.error('❌ Upload failed:', response.statusText);
-          alert('Failed to upload document. Please try again.');
-        }
-
-      } catch (error) {
-        console.error('Upload error:', error);
-        alert('Failed to upload document. Please check your connection and try again.');
-      }
-
-      // Clean up progress after a delay
-      setTimeout(() => {
-        setUploadProgress(prev => {
-          const newProgress = { ...prev };
-          delete newProgress[fileId];
-          return newProgress;
-        });
-      }, 1500);
-    }
-    
-    setIsUploading(false);
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'image/*': ['.png', '.jpg', '.jpeg'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-    },
-    maxSize: 10 * 1024 * 1024, // 10MB
-  });
-
   const filteredDocuments = (Array.isArray(documents) ? documents : []).filter((doc) => {
     const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const pendingCount = (Array.isArray(documents) ? documents : []).filter(doc => doc.status === 'uploaded').length;
+  const approvedCount = (Array.isArray(documents) ? documents : []).filter(doc => doc.status === 'verified').length;
+  const rejectedCount = (Array.isArray(documents) ? documents : []).filter(doc => doc.status === 'rejected').length;
 
   const getStatusBadge = (status: string) => {
     const config = {
@@ -168,7 +107,7 @@ export default function DocumentsPage() {
       verified: { 
         icon: CheckCircle, 
         className: 'bg-green-100 text-green-800 border-green-200',
-        text: 'Verified'
+        text: 'Approved'
       },
       rejected: { 
         icon: XCircle, 
@@ -194,8 +133,6 @@ export default function DocumentsPage() {
     return '📁';
   };
 
-
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -208,61 +145,86 @@ export default function DocumentsPage() {
 
   const handleViewDocument = (doc: Document) => {
     setSelectedDocument(doc);
-    setShowDocumentModal(true);
+    setShowReviewModal(true);
+    setReviewAction(null);
+    setReviewComments('');
   };
 
   const handleDownloadDocument = async (doc: Document) => {
     try {
-      // Use the download API endpoint to get the actual file
       const response = await fetch(`/api/documents/${doc.id}/download`);
       
       if (!response.ok) {
         throw new Error(`Download failed: ${response.statusText}`);
       }
       
-      // Get the file as a blob
       const blob = await response.blob();
-      
-      // Create download link
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = doc.name;
       
-      // Trigger download
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      // Clean up
       URL.revokeObjectURL(url);
       
       console.log('📥 Download completed for:', doc.name);
     } catch (error) {
       console.error('Download failed:', error);
-      alert(`Failed to download document: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`Failed to download document: ${error.message}`);
     }
   };
 
-  const handleDeleteDocument = async (docId: string) => {
-    if (confirm('Are you sure you want to delete this document?')) {
-      try {
-        const response = await fetch(`/api/documents/${docId}`, {
-          method: 'DELETE',
-        });
+  const handleReviewSubmit = async () => {
+    if (!selectedDocument || !reviewAction) return;
+
+    setIsSubmittingReview(true);
+    
+    try {
+      const newStatus = reviewAction === 'approve' ? 'verified' : 'rejected';
+      
+      const response = await fetch(`/api/documents/${selectedDocument.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          remarks: reviewComments || undefined,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: 'current-reviewer', // In production, get from auth
+        }),
+      });
+
+      if (response.ok) {
+        const updatedDocument = await response.json();
         
-        if (response.ok) {
-          // Remove from local state only if API call succeeded
-          setDocuments(prev => prev.filter(doc => doc.id !== docId));
-          console.log('🗑️ Document deleted:', docId);
-        } else {
-          console.error('Failed to delete document:', response.statusText);
-          alert('Failed to delete document. Please try again.');
-        }
-      } catch (error) {
-        console.error('Delete API call failed:', error);
-        alert('Failed to delete document. Please check your connection and try again.');
+        // Update the document in the list
+        setDocuments(prev => 
+          prev.map(doc => 
+            doc.id === selectedDocument.id 
+              ? { ...doc, status: newStatus, remarks: reviewComments }
+              : doc
+          )
+        );
+        
+        setShowReviewModal(false);
+        setSelectedDocument(null);
+        setReviewAction(null);
+        setReviewComments('');
+        
+        console.log(`✅ Document ${reviewAction}d:`, selectedDocument.name);
+      } else {
+        throw new Error(`Review failed: ${response.statusText}`);
       }
+      
+    } catch (error) {
+      console.error('Review submission failed:', error);
+      alert(`Failed to submit review: ${error.message}`);
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -271,65 +233,51 @@ export default function DocumentsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Documents</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Document Review</h1>
           <p className="text-gray-600 mt-1">
-            Upload and manage compliance documents
+            Review and approve vendor compliance documents
           </p>
         </div>
       </div>
 
-      {/* Upload Area */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Upload className="mr-2 h-5 w-5" />
-            Upload Documents
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isDragActive
-                ? 'border-blue-400 bg-blue-50'
-                : 'border-gray-300 hover:border-gray-400'
-            }`}
-          >
-            <input {...getInputProps()} />
-            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            {isDragActive ? (
-              <p className="text-blue-600 font-medium">Drop the files here...</p>
-            ) : (
-              <div>
-                <p className="text-gray-600 font-medium mb-2">
-                  Drag & drop files here, or click to select
-                </p>
-                <p className="text-sm text-gray-500">
-                  Supports PDF, DOC, DOCX, PNG, JPG (max 10MB)
-                </p>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center">
+              <Clock className="h-8 w-8 text-yellow-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Pending Review</p>
+                <p className="text-2xl font-bold text-gray-900">{pendingCount}</p>
               </div>
-            )}
-          </div>
-
-          {/* Upload Progress */}
-          {Object.keys(uploadProgress).length > 0 && (
-            <div className="mt-4 space-y-2">
-              {Object.entries(uploadProgress).map(([fileId, progress]) => (
-                <div key={fileId} className="flex items-center space-x-3">
-                  <FileText className="h-4 w-4 text-gray-400" />
-                  <div className="flex-1">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-600">Uploading...</span>
-                      <span className="text-gray-500">{progress}%</span>
-                    </div>
-                    <Progress value={progress} className="h-2" />
-                  </div>
-                </div>
-              ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Approved</p>
+                <p className="text-2xl font-bold text-gray-900">{approvedCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center">
+              <XCircle className="h-8 w-8 text-red-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Rejected</p>
+                <p className="text-2xl font-bold text-gray-900">{rejectedCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Filters */}
       <Card>
@@ -354,7 +302,7 @@ export default function DocumentsPage() {
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="uploaded">Pending Review</SelectItem>
-                <SelectItem value="verified">Verified</SelectItem>
+                <SelectItem value="verified">Approved</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
@@ -365,7 +313,7 @@ export default function DocumentsPage() {
       {/* Documents Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Documents ({filteredDocuments.length})</CardTitle>
+          <CardTitle>Documents for Review ({filteredDocuments.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -419,9 +367,9 @@ export default function DocumentsPage() {
                         variant="ghost" 
                         size="sm"
                         onClick={() => handleViewDocument(doc)}
-                        title="View document details"
+                        title="Review document"
                       >
-                        <Eye className="h-4 w-4" />
+                        <MessageSquare className="h-4 w-4" />
                       </Button>
                       <Button 
                         variant="ghost" 
@@ -430,15 +378,6 @@ export default function DocumentsPage() {
                         title="Download document"
                       >
                         <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteDocument(doc.id)}
-                        className="text-red-600 hover:text-red-700"
-                        title="Delete document"
-                      >
-                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -451,7 +390,7 @@ export default function DocumentsPage() {
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Loading documents...</h3>
-              <p className="text-gray-500">Please wait while we fetch your documents</p>
+              <p className="text-gray-500">Please wait while we fetch documents for review</p>
             </div>
           )}
 
@@ -462,29 +401,24 @@ export default function DocumentsPage() {
               <p className="text-gray-500">
                 {searchTerm || statusFilter !== 'all'
                   ? 'Try adjusting your search or filters'
-                  : 'Upload your first document to get started'}
+                  : 'No documents available for review'}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Document View Modal */}
-      {showDocumentModal && selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Document Details</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDocumentModal(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </Button>
-            </div>
-            
+      {/* Review Modal */}
+      <Dialog open={showReviewModal} onOpenChange={setShowReviewModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Review Document</DialogTitle>
+            <DialogDescription>
+              Review and approve or reject this document
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedDocument && (
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
                 <span className="text-3xl">{getFileIcon(selectedDocument.file_type)}</span>
@@ -494,7 +428,7 @@ export default function DocumentsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                   <div>{getStatusBadge(selectedDocument.status)}</div>
@@ -504,57 +438,84 @@ export default function DocumentsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Uploaded</label>
                   <p className="text-sm text-gray-900">{formatDate(selectedDocument.created_at)}</p>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
-                  <p className="text-sm text-gray-900">{selectedDocument.vendor?.name || 'N/A'}</p>
-                </div>
-
-                {selectedDocument.expires_on && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Expires</label>
-                    <p className="text-sm text-gray-900">
-                      {new Date(selectedDocument.expires_on).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
               </div>
 
-              {selectedDocument.remarks && (
+              {selectedDocument.expires_on && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
-                  <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
-                    {selectedDocument.remarks}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Expires</label>
+                  <p className="text-sm text-gray-900">
+                    {new Date(selectedDocument.expires_on).toLocaleDateString()}
                   </p>
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">File URL</label>
-                <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded-md font-mono break-all">
-                  {selectedDocument.file_url}
-                </p>
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">Review Decision</label>
+                <div className="flex space-x-3">
+                  <Button
+                    variant={reviewAction === 'approve' ? 'default' : 'outline'}
+                    onClick={() => setReviewAction('approve')}
+                    className="flex-1"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant={reviewAction === 'reject' ? 'destructive' : 'outline'}
+                    onClick={() => setReviewAction('reject')}
+                    className="flex-1"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reject
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => handleDownloadDocument(selectedDocument)}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDocumentModal(false)}
-                >
-                  Close
-                </Button>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Comments {reviewAction === 'reject' && <span className="text-red-500">*</span>}
+                </label>
+                <Textarea
+                  placeholder={
+                    reviewAction === 'approve' 
+                      ? 'Optional: Add approval comments...'
+                      : reviewAction === 'reject'
+                      ? 'Required: Explain why this document is being rejected...'
+                      : 'Add your review comments...'
+                  }
+                  value={reviewComments}
+                  onChange={(e) => setReviewComments(e.target.value)}
+                  rows={3}
+                />
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowReviewModal(false)}
+              disabled={isSubmittingReview}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleDownloadDocument(selectedDocument!)}
+              variant="outline"
+              disabled={isSubmittingReview}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+            <Button
+              onClick={handleReviewSubmit}
+              disabled={!reviewAction || (reviewAction === 'reject' && !reviewComments.trim()) || isSubmittingReview}
+            >
+              {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

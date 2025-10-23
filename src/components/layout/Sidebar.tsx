@@ -13,7 +13,7 @@ import {
   Bot,
   Shield,
   Settings,
-
+  MessageSquare,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -32,6 +32,7 @@ const navigationItems = {
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Vendors', href: '/vendors', icon: Building2 },
     { name: 'Documents', href: '/documents', icon: FileText },
+    { name: 'Review', href: '/review', icon: MessageSquare },
     { name: 'AI Assistant', href: '/ai-assistant', icon: Bot },
     { name: 'Admin Panel', href: '/admin', icon: Shield },
     { name: 'Settings', href: '/settings', icon: Settings },
@@ -40,6 +41,7 @@ const navigationItems = {
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Vendors', href: '/vendors', icon: Building2 },
     { name: 'Documents', href: '/documents', icon: FileText },
+    { name: 'Review', href: '/review', icon: MessageSquare },
     { name: 'AI Assistant', href: '/ai-assistant', icon: Bot },
     { name: 'Settings', href: '/settings', icon: Settings },
   ],

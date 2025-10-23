@@ -60,46 +60,31 @@ export default function VendorsPage() {
   const fetchVendors = async () => {
     try {
       setIsPageLoading(true);
+      console.log('🔍 Fetching vendors...');
       
-      // Get the current session to include auth token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        throw new Error('Authentication failed');
-      }
-      
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      // Include auth token if available
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-
       const response = await fetch('/api/vendors', {
         method: 'GET',
-        headers,
-        credentials: 'include', // Include cookies
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
       if (!response.ok) {
-        if (response.status === 401) {
-          console.error('Authentication failed - user may need to log in again');
-        }
+        console.error(`❌ HTTP error! status: ${response.status}`);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
       
       if (data.error) {
+        console.error('❌ API error:', data.error);
         throw new Error(data.error);
       }
 
+      console.log(`✅ Loaded ${data.vendors?.length || 0} vendors`);
       setVendors(data.vendors || []);
     } catch (error) {
-      console.error('Error fetching vendors:', error);
+      console.error('❌ Error fetching vendors:', error);
       setVendors([]);
     } finally {
       setIsPageLoading(false);
@@ -133,27 +118,13 @@ export default function VendorsPage() {
   const handleAddVendor = async (data: Partial<Vendor>) => {
     setIsLoading(true);
     try {
-      // Get the current session to include auth token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('📝 Adding vendor:', data.name);
       
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        throw new Error('Authentication failed. Please log in again.');
-      }
-      
-      if (!session) {
-        throw new Error('No active session. Please log in again.');
-      }
-      
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      };
-
       const response = await fetch('/api/vendors', {
         method: 'POST',
-        headers,
-        credentials: 'include', // Include cookies
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           name: data.name,
           contact_email: data.contact_email,
@@ -163,22 +134,22 @@ export default function VendorsPage() {
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        }
+        console.error(`❌ HTTP error! status: ${response.status}`);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
       
       if (result.error) {
+        console.error('❌ API error:', result.error);
         throw new Error(result.error);
       }
       
+      console.log('✅ Vendor added successfully');
       setVendors(prev => [result.vendor, ...prev]);
       setIsAddDialogOpen(false);
     } catch (error) {
-      console.error('Error adding vendor:', error);
+      console.error('❌ Error adding vendor:', error);
       alert(error instanceof Error ? error.message : 'Failed to add vendor');
     } finally {
       setIsLoading(false);
@@ -217,16 +188,23 @@ export default function VendorsPage() {
     if (!confirm('Are you sure you want to delete this vendor?')) return;
     
     try {
-      const { error } = await supabase
-        .from('vendors')
-        .delete()
-        .eq('id', vendorId);
+      const response = await fetch(`/api/vendors/${vendorId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
       
       setVendors(prev => prev.filter(v => v.id !== vendorId));
+      console.log('✅ Vendor deleted successfully');
     } catch (error) {
       console.error('Error deleting vendor:', error);
+      alert(`Failed to delete vendor: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

@@ -38,9 +38,13 @@ export interface Document {
   name: string;
   file_url: string;
   file_type: string;
+  file_content?: string; // Base64 encoded file content
+  file_size?: number; // File size in bytes
   status: 'uploaded' | 'verified' | 'rejected';
   expires_on?: string;
   remarks?: string;
+  reviewed_at?: string; // When the document was reviewed
+  reviewed_by?: string; // Who reviewed the document
   created_at: string;
   vendor?: { name: string };
 }

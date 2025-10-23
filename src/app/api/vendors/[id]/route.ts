@@ -1,33 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Create Supabase client for API routes with service role key
+function createSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await params;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Get user from session
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('sb-access-token')?.value;
-    
-    let authUser;
-    if (accessToken) {
-      const { data: { user } } = await supabase.auth.getUser(accessToken);
-      authUser = user;
-    }
-    
-    if (!authUser) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    const supabase = createSupabaseClient();
+    const vendorId = params.id;
+
+    const { data: vendor, error } = await supabase
+      .from('vendors')
+      .select('*')
+      .eq('id', vendorId)
+      .single();
+
+    if (error || !vendor) {
+      return NextResponse.json(
+        { error: 'Vendor not found' },
+        { status: 404 }
+      );
     }
 
+    return NextResponse.json({ vendor });
+
+  } catch (error) {
+    console.error('Get vendor API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = createSupabaseClient();
+    const vendorId = params.id;
     const body = await request.json();
+
     const { name, contact_email, category, status } = body;
 
-    // Update vendor
+    // Validate required fields
+    if (!name || !contact_email) {
+      return NextResponse.json(
+        { error: 'Missing required fields: name, contact_email' },
+        { status: 400 }
+      );
+    }
+
     const { data: vendor, error } = await supabase
       .from('vendors')
       .update({
@@ -35,59 +71,86 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         contact_email,
         category,
         status,
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
-      .eq('id', id)
-      .select()
+      .eq('id', vendorId)
+      .select('*')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database update failed:', error.message);
+      return NextResponse.json(
+        { error: 'Failed to update vendor in database' },
+        { status: 500 }
+      );
+    }
 
+    if (!vendor) {
+      return NextResponse.json(
+        { error: 'Vendor not found' },
+        { status: 404 }
+      );
+    }
+
+    console.log('✅ Vendor updated:', vendor.name);
     return NextResponse.json({ vendor });
 
   } catch (error) {
-    console.error('Vendor update error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to update vendor',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('Update vendor API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await params;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Get user from session
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('sb-access-token')?.value;
-    
-    let authUser;
-    if (accessToken) {
-      const { data: { user } } = await supabase.auth.getUser(accessToken);
-      authUser = user;
-    }
-    
-    if (!authUser) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    const supabase = createSupabaseClient();
+    const vendorId = params.id;
+
+    // First check if vendor exists
+    const { data: existingVendor, error: fetchError } = await supabase
+      .from('vendors')
+      .select('id, name')
+      .eq('id', vendorId)
+      .single();
+
+    if (fetchError || !existingVendor) {
+      return NextResponse.json(
+        { error: 'Vendor not found' },
+        { status: 404 }
+      );
     }
 
-    // Delete vendor
-    const { error } = await supabase
+    // Delete the vendor
+    const { error: deleteError } = await supabase
       .from('vendors')
       .delete()
-      .eq('id', id);
+      .eq('id', vendorId);
 
-    if (error) throw error;
+    if (deleteError) {
+      console.error('Database delete failed:', deleteError.message);
+      return NextResponse.json(
+        { error: 'Failed to delete vendor from database' },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json({ success: true });
+    console.log('✅ Vendor deleted:', existingVendor.name);
+    return NextResponse.json(
+      { message: 'Vendor deleted successfully', id: vendorId },
+      { status: 200 }
+    );
 
   } catch (error) {
-    console.error('Vendor deletion error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to delete vendor',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('Delete vendor API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

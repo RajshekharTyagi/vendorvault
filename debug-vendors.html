@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Vendors API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .vendor { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        .error { color: red; }
+        .success { color: green; }
+        button { margin: 5px; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <h1>Vendors API Debug</h1>
+    <button onclick="testAPI()">Test Vendors API</button>
+    <button onclick="testEyeIcon()">Test Eye Icon Functionality</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        async function testAPI() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testing API...</p>';
+            
+            try {
+                const response = await fetch('/api/vendors');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    results.innerHTML = `
+                        <div class="success">
+                            <h3>✅ API Working!</h3>
+                            <p>Found ${data.vendors?.length || 0} vendors:</p>
+                            ${data.vendors?.map(vendor => `
+                                <div class="vendor">
+                                    <strong>${vendor.name}</strong><br>
+                                    Email: ${vendor.contact_email}<br>
+                                    Category: ${vendor.category}<br>
+                                    Status: ${vendor.status}<br>
+                                    <button onclick="showVendorDetails('${vendor.id}', '${vendor.name}', '${vendor.contact_email}', '${vendor.category}', '${vendor.status}')">
+                                        👁️ View Details
+                                    </button>
+                                </div>
+                            `).join('') || '<p>No vendors found</p>'}
+                        </div>
+                    `;
+                } else {
+                    results.innerHTML = `<div class="error">❌ API Error: ${data.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                results.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
+            }
+        }
+        
+        function showVendorDetails(id, name, email, category, status) {
+            alert(`Vendor Details:
+            
+ID: ${id}
+Name: ${name}
+Email: ${email}
+Category: ${category}
+Status: ${status}
+
+This simulates the eye icon functionality!`);
+        }
+        
+        function testEyeIcon() {
+            alert('Eye icon test: This would open a vendor details dialog in the actual app.');
+        }
+    </script>
+</body>
+</html>

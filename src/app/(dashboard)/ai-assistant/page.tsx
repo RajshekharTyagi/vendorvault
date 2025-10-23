@@ -6,16 +6,18 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import {
-  Bot,
   User,
   Send,
   Loader2,
   FileText,
   Building2,
-  CheckCircle,
-  AlertTriangle,
   Lightbulb,
+  Brain,
+  Zap,
+  Target,
+  Shield,
 } from 'lucide-react';
 
 interface Message {
@@ -24,61 +26,49 @@ interface Message {
   content: string;
   timestamp: Date;
   sources?: string[];
+  confidence?: number;
+  thinking?: string;
+  suggestions?: string[];
 }
 
-// Enhanced AI responses with better intelligence and context
-const mockResponses = [
-  {
-    trigger: ['compliance', 'status', 'overview', 'summary'],
-    response: "📊 **Vendor Compliance Overview**\n\nBased on your current portfolio analysis:\n\n**Overall Health Score: 78/100** ⭐\n\n**Compliance Breakdown:**\n• ✅ **Fully Compliant:** 2 vendors (40%)\n• ⚠️ **Minor Issues:** 2 vendors (40%) \n• 🚨 **Action Required:** 1 vendor (20%)\n\n**Key Insights:**\n• Your compliance rate has improved 12% this quarter\n• Average document processing time: 3.2 days\n• Next critical deadline: Jan 31 (ISO Certificate renewal)\n\n**Recommended Actions:**\n1. Focus on DataFlow Systems (high-risk vendor)\n2. Schedule quarterly reviews with medium-risk vendors\n3. Implement automated renewal reminders\n\nWould you like me to dive deeper into any specific area?",
-    sources: ['Vendor Database', 'Compliance Analytics', 'Risk Engine']
-  },
-  {
-    trigger: ['missing', 'documents', 'requirements', 'pending'],
-    response: "📋 **Missing Documents Analysis**\n\n**Critical Priority (5 items):**\n\n🔴 **Immediate Action Required:**\n• SecureData Inc: Insurance Certificate\n  - Due: Feb 15, 2024 (12 days remaining)\n  - Impact: High - Required for contract renewal\n  - Contact: sarah@securedata.com\n\n🟡 **Medium Priority:**\n• CloudFirst Ltd: Updated Privacy Policy\n  - Due: Mar 1, 2024 (28 days remaining)\n  - Impact: Medium - GDPR compliance requirement\n\n• DataFlow Systems: Financial Statements (Q4 2023)\n  - Overdue by 15 days\n  - Impact: High - Affects credit rating assessment\n\n**Automation Suggestions:**\n• Set up email reminders 30/15/7 days before due dates\n• Create document templates for vendors\n• Enable vendor self-service portal\n\n**Next Steps:**\nShall I draft reminder emails for the critical items or help you set up automated workflows?",
-    sources: ['Document Management', 'Renewal Tracker', 'Vendor Communications']
-  },
-  {
-    trigger: ['renewal', 'expiring', 'due', 'upcoming'],
-    response: "⏰ **Document Renewal Dashboard**\n\n**Next 30 Days - Critical Timeline:**\n\n**🚨 URGENT (Next 7 days):**\n• **TechCorp Solutions** - ISO 27001 Certificate\n  - Expires: January 31, 2024 (3 days!)\n  - Status: Renewal in progress ✅\n  - Contact: John Smith (john@techcorp.com)\n  - Action: Follow up on renewal status\n\n**⚠️ HIGH PRIORITY (Next 2 weeks):**\n• **SecureData Inc** - Business License\n  - Expires: February 10, 2024 (12 days)\n  - Status: No response to reminders ❌\n  - Last contact: January 15, 2024\n  - Action: Escalate to procurement team\n\n**📅 MEDIUM PRIORITY (Next 30 days):**\n• **CloudFirst Ltd** - Insurance Policy\n  - Expires: February 28, 2024 (30 days)\n  - Status: Vendor notified ✅\n  - Expected renewal: February 20, 2024\n\n**Smart Recommendations:**\n• Schedule weekly check-ins for urgent items\n• Consider backup vendors for non-responsive suppliers\n• Implement 90-day advance renewal process\n\nWould you like me to generate renewal reminder templates or create calendar alerts?",
-    sources: ['Renewal Management', 'Calendar Integration', 'Vendor Communications']
-  },
-  {
-    trigger: ['risk', 'assessment', 'analysis', 'score'],
-    response: "🎯 **Comprehensive Risk Assessment**\n\n**Portfolio Risk Score: 6.2/10** (Moderate Risk)\n\n**Risk Distribution:**\n\n🟢 **LOW RISK (2 vendors - 40%)**\n• **TechCorp Solutions** - Score: 8.9/10\n  - Strengths: Perfect compliance history, proactive communication\n  - Financial health: Excellent (A+ rating)\n  - Relationship: 3+ years, strategic partner\n\n• **NetworkPro Services** - Score: 8.1/10\n  - Strengths: ISO certified, regular audits\n  - Minor: Occasional late document submissions\n\n🟡 **MEDIUM RISK (2 vendors - 40%)**\n• **CloudFirst Ltd** - Score: 6.5/10\n  - Concerns: Missing recent security audit\n  - Mitigation: Scheduled audit for March 2024\n  - Financial: Stable, growing company\n\n• **SecureData Inc** - Score: 5.8/10\n  - Concerns: Slow response times, document delays\n  - Mitigation: Quarterly business reviews implemented\n\n🔴 **HIGH RISK (1 vendor - 20%)**\n• **DataFlow Systems** - Score: 3.2/10\n  - Critical Issues: Suspended vendor status\n  - Missing: Insurance, financial statements, security certs\n  - Recommendation: **Immediate review required**\n  - Alternative vendors identified: 3 options available\n\n**Strategic Recommendations:**\n1. **Immediate:** Conduct DataFlow Systems review meeting\n2. **Short-term:** Diversify vendor portfolio (reduce single points of failure)\n3. **Long-term:** Implement continuous monitoring dashboard\n\nWould you like me to generate a detailed remediation plan or identify alternative vendors?",
-    sources: ['Risk Analytics', 'Vendor Scoring', 'Financial Data', 'Compliance History']
-  },
-  {
-    trigger: ['help', 'what can you do', 'capabilities', 'features'],
-    response: "🤖 **VendorVault AI Assistant Capabilities**\n\nI'm your intelligent compliance companion! Here's how I can help:\n\n**📊 Analytics & Insights**\n• Real-time compliance scoring and risk assessment\n• Trend analysis and predictive insights\n• Custom reports and dashboards\n• Benchmark comparisons\n\n**📋 Document Management**\n• Track missing documents and requirements\n• Automated renewal reminders and alerts\n• Document validation and compliance checking\n• Template generation and standardization\n\n**🎯 Risk Management**\n• Vendor risk scoring and categorization\n• Early warning systems for compliance issues\n• Alternative vendor recommendations\n• Mitigation strategy development\n\n**🔄 Process Automation**\n• Workflow optimization suggestions\n• Automated email templates and communications\n• Calendar integration and scheduling\n• Vendor onboarding guidance\n\n**💡 Smart Recommendations**\n• Proactive compliance suggestions\n• Cost optimization opportunities\n• Process improvement recommendations\n• Industry best practices\n\n**Try asking me:**\n• \"Show me high-risk vendors\"\n• \"What documents expire this month?\"\n• \"How can I improve our compliance rate?\"\n• \"Generate a vendor performance report\"\n\nWhat would you like to explore first?",
-    sources: ['AI Knowledge Base', 'Feature Documentation']
-  }
-];
+// Enhanced Quick Actions with VendorVault-specific queries
 
 const quickActions = [
   {
     icon: Building2,
-    title: "Vendor Overview",
-    description: "Get compliance status for all vendors",
-    query: "Show me the compliance status overview for all vendors"
+    title: "What is VendorVault?",
+    description: "Learn about the project and capabilities",
+    query: "What is VendorVault and what does it do?"
+  },
+  {
+    icon: Shield,
+    title: "User Roles",
+    description: "Admin, vendor, and auditor roles",
+    query: "Explain the different user roles in VendorVault"
+  },
+  {
+    icon: Zap,
+    title: "Key Features",
+    description: "System features and functionality",
+    query: "What are the main features of VendorVault?"
+  },
+  {
+    icon: Brain,
+    title: "AI Capabilities",
+    description: "AI assistant and RAG system",
+    query: "What can the AI assistant do and how does it work?"
+  },
+  {
+    icon: Target,
+    title: "Technical Details",
+    description: "Technology stack and architecture",
+    query: "How is VendorVault built technically?"
   },
   {
     icon: FileText,
-    title: "Missing Documents",
-    description: "Find what documents are still needed",
-    query: "What documents are missing from our vendors?"
-  },
-  {
-    icon: AlertTriangle,
-    title: "Upcoming Renewals",
-    description: "Check for expiring certificates",
-    query: "Show me upcoming document renewals and expirations"
-  },
-  {
-    icon: CheckCircle,
-    title: "Risk Analysis",
-    description: "Analyze vendor risk levels",
-    query: "Provide a risk assessment for our vendor portfolio"
+    title: "Compliance Management",
+    description: "Document and compliance workflows",
+    query: "How does compliance management work in VendorVault?"
   }
 ];
 
@@ -87,12 +77,15 @@ export default function AIAssistantPage() {
     {
       id: '1',
       type: 'assistant',
-      content: "Hello! I'm your VendorVault AI Assistant. I can help you with compliance questions, document analysis, risk assessments, and vendor management insights. What would you like to know?",
+      content: "🤖 **Welcome to VendorVault AI Assistant!**\n\nI'm your intelligent companion for all things VendorVault. I have deep knowledge about:\n\n• **Project Overview** - What VendorVault is and how it works\n• **User Roles** - Admin, Vendor, and Auditor capabilities\n• **Features** - Document management, compliance tracking, AI capabilities\n• **Technical Details** - Architecture, tech stack, and implementation\n• **Best Practices** - Compliance workflows and optimization tips\n\nI use advanced RAG (Retrieval-Augmented Generation) to provide accurate, contextual answers based on the actual VendorVault project. Try asking me anything about the system!",
       timestamp: new Date(),
+      sources: ['VendorVault Knowledge Base'],
+      confidence: 1.0
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showThinking, setShowThinking] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -108,40 +101,55 @@ export default function AIAssistantPage() {
     scrollToBottom();
   }, [messages]);
 
-  const generateResponse = (userMessage: string): { response: string; sources: string[] } => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    // Enhanced pattern matching with more intelligent responses
-    for (const mockResponse of mockResponses) {
-      if (mockResponse.trigger.some(trigger => lowerMessage.includes(trigger))) {
-        return {
-          response: mockResponse.response,
-          sources: mockResponse.sources
-        };
+  const generateResponse = async (userMessage: string): Promise<{ 
+    response: string; 
+    sources: string[]; 
+    suggestions?: string[];
+    confidence?: number;
+    thinking?: string;
+  }> => {
+    try {
+      // Call the enhanced RAG API
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          context: 'dashboard',
+          userRole: 'admin' // You can make this dynamic based on user session
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI API request failed: ${response.status}`);
       }
-    }
-    
-    // Context-aware default responses based on keywords
-    if (lowerMessage.includes('vendor') || lowerMessage.includes('supplier')) {
+
+      const data = await response.json();
+      
       return {
-        response: "🏢 **Vendor Management Assistance**\n\nI can help you with various vendor-related tasks:\n\n**📊 Analytics:**\n• Vendor performance analysis\n• Compliance scoring and tracking\n• Risk assessment and monitoring\n\n**📋 Operations:**\n• Document management and tracking\n• Renewal scheduling and reminders\n• Onboarding process optimization\n\n**🎯 Strategic Insights:**\n• Cost optimization opportunities\n• Vendor diversification recommendations\n• Industry benchmarking\n\nWhat specific aspect of vendor management would you like to explore? Try asking about compliance status, risk analysis, or upcoming renewals.",
-        sources: ['Vendor Management System', 'AI Knowledge Base']
+        response: data.response || 'I apologize, but I encountered an issue processing your request.',
+        sources: data.sources || ['AI Assistant'],
+        suggestions: data.suggestions || [],
+        confidence: data.confidence || 0.5,
+        thinking: data.thinking || ''
+      };
+
+    } catch (error) {
+      console.error('AI API Error:', error);
+      
+      // Enhanced fallback response
+      return {
+        response: `I apologize, but I'm having trouble connecting to my knowledge base right now. However, I can tell you that VendorVault is a comprehensive vendor compliance management system built with Next.js 15, React 19, and Supabase.\n\nPlease try asking your question again, or try one of the Quick Actions on the left.`,
+        sources: ['Fallback System'],
+        suggestions: ['What is VendorVault?', 'Show me the features', 'Explain user roles'],
+        confidence: 0.3
       };
     }
-    
-    if (lowerMessage.includes('document') || lowerMessage.includes('file') || lowerMessage.includes('certificate')) {
-      return {
-        response: "📄 **Document Management Support**\n\nI can assist with all document-related queries:\n\n**Current Status:**\n• Track missing or pending documents\n• Monitor expiration dates and renewals\n• Validate document compliance requirements\n\n**Automation:**\n• Set up automated reminders\n• Generate document request templates\n• Create compliance checklists\n\n**Analysis:**\n• Document processing time analysis\n• Compliance gap identification\n• Vendor response time tracking\n\nTry asking: \"What documents are missing?\" or \"Show me expiring certificates\"",
-        sources: ['Document Management', 'Compliance Tracker']
-      };
-    }
-    
-    // Friendly default response
-    return {
-      response: "👋 **Hello! I'm here to help with your vendor compliance needs.**\n\nI specialize in:\n\n🎯 **Quick Insights:**\n• Compliance status overviews\n• Risk assessments and scoring\n• Document tracking and renewals\n• Vendor performance analytics\n\n💡 **Smart Suggestions:**\n• Process optimization recommendations\n• Automated workflow setup\n• Best practice guidance\n• Proactive risk mitigation\n\n**Popular Questions:**\n• \"Show me our compliance overview\"\n• \"What documents are expiring soon?\"\n• \"Which vendors need attention?\"\n• \"How can I improve our processes?\"\n\nOr try one of the Quick Actions on the left! What would you like to know?",
-      sources: ['AI Assistant', 'Help System']
-    };
   };
+
+
 
   const handleSendMessage = async (message?: string) => {
     const messageToSend = message || inputValue.trim();
@@ -159,21 +167,38 @@ export default function AIAssistantPage() {
     setInputValue('');
     setIsLoading(true);
 
-    // Simulate AI processing delay
-    setTimeout(() => {
-      const { response, sources } = generateResponse(messageToSend);
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: response,
-        timestamp: new Date(),
-        sources,
-      };
+    // Process with RAG engine
+    setTimeout(async () => {
+      try {
+        const { response, sources, suggestions, confidence, thinking } = await generateResponse(messageToSend);
+        
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: response || 'I apologize, but I encountered an issue processing your request.',
+          timestamp: new Date(),
+          sources: sources || ['AI Assistant'],
+          confidence: confidence || 0.5,
+          thinking: thinking || '',
+          suggestions: suggestions || []
+        };
 
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsLoading(false);
-    }, 1500);
+        setMessages(prev => [...prev, assistantMessage]);
+      } catch (error) {
+        console.error('Error generating response:', error);
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: '❌ **System Error**\n\nI encountered an issue processing your request. This might be due to:\n\n• Network connectivity issues\n• API service temporarily unavailable\n• Invalid request format\n\nPlease try again in a moment, or try one of the Quick Actions on the left.',
+          timestamp: new Date(),
+          sources: ['Error Handler'],
+          confidence: 0.1
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 2000); // Slightly longer delay to show the thinking process
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -202,31 +227,31 @@ export default function AIAssistantPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Quick Actions */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Lightbulb className="mr-2 h-5 w-5" />
+        <div className="lg:col-span-4">
+          <Card className="h-fit">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-base">
+                <Lightbulb className="mr-2 h-4 w-4 text-yellow-500" />
                 Quick Actions
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2 pt-0">
               {quickActions.map((action, index) => {
                 const Icon = action.icon;
                 return (
                   <Button
                     key={index}
                     variant="outline"
-                    className="w-full h-auto p-4 text-left justify-start"
+                    className="w-full h-auto p-3 text-left justify-start hover:bg-blue-50 hover:border-blue-200 transition-colors"
                     onClick={() => handleSendMessage(action.query)}
                   >
-                    <div className="flex items-start space-x-3">
-                      <Icon className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-sm">{action.title}</p>
-                        <p className="text-xs text-gray-500 mt-1">{action.description}</p>
+                    <div className="flex items-start space-x-3 w-full">
+                      <Icon className="h-4 w-4 text-blue-600 mt-1 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-gray-900 leading-tight">{action.title}</p>
+                        <p className="text-xs text-gray-500 mt-1 leading-relaxed break-words">{action.description}</p>
                       </div>
                     </div>
                   </Button>
@@ -237,22 +262,28 @@ export default function AIAssistantPage() {
         </div>
 
         {/* Chat Interface */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-8">
           <Card className="h-[700px] flex flex-col shadow-lg border-0 bg-gradient-to-b from-gray-50 to-white overflow-hidden">
             <CardHeader className="border-b bg-white rounded-t-lg">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
-                    <Bot className="h-5 w-5 text-white" />
+                    <Brain className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">VendorVault AI Assistant</h3>
-                    <p className="text-sm text-gray-500">Online • Ready to help</p>
+                    <p className="text-sm text-gray-500">RAG-Powered • Project Expert</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-gray-500">Active</span>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <Zap className="h-4 w-4 text-yellow-500" />
+                    <span className="text-xs text-gray-500">RAG Engine</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-gray-500">Online</span>
+                  </div>
                 </div>
               </CardTitle>
             </CardHeader>
@@ -276,7 +307,7 @@ export default function AIAssistantPage() {
                         <div className="flex items-start space-x-3">
                           {message.type === 'assistant' && (
                             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                              <Bot className="h-4 w-4 text-white" />
+                              <Brain className="h-4 w-4 text-white" />
                             </div>
                           )}
                           {message.type === 'user' && (
@@ -292,7 +323,7 @@ export default function AIAssistantPage() {
                                 <div 
                                   className="whitespace-pre-wrap break-words overflow-wrap-anywhere"
                                   dangerouslySetInnerHTML={{
-                                    __html: message.content
+                                    __html: (message.content || '')
                                       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
                                       .replace(/^(#{1,3})\s(.+)$/gm, '<h$1 class="font-bold text-gray-900 mb-2">$2</h$1>')
                                       .replace(/^•\s(.+)$/gm, '<div class="flex items-start space-x-2 mb-1"><span class="text-blue-500 font-bold">•</span><span class="break-words">$1</span></div>')
@@ -305,20 +336,84 @@ export default function AIAssistantPage() {
                               )}
                             </div>
                             
-                            {message.sources && (
-                              <div className="mt-4 pt-3 border-t border-gray-100">
-                                <p className="text-xs text-gray-500 mb-2 font-medium">📚 Sources:</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {message.sources.map((source, index) => (
-                                    <Badge 
-                                      key={index} 
-                                      variant="outline" 
-                                      className="text-xs bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                            {message.type === 'assistant' && (
+                              <div className="mt-4 space-y-3">
+                                {/* Confidence Score */}
+                                {message.confidence !== undefined && (
+                                  <div className="pt-3 border-t border-gray-100">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <p className="text-xs text-gray-500 font-medium">🎯 Confidence Score:</p>
+                                      <span className="text-xs font-semibold text-gray-700">
+                                        {Math.round(message.confidence * 100)}%
+                                      </span>
+                                    </div>
+                                    <Progress 
+                                      value={message.confidence * 100} 
+                                      className="h-2"
+                                    />
+                                  </div>
+                                )}
+                                
+                                {/* Sources */}
+                                {message.sources && (
+                                  <div className="pt-3 border-t border-gray-100">
+                                    <p className="text-xs text-gray-500 mb-2 font-medium">📚 Knowledge Sources:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {message.sources.map((source, index) => (
+                                        <Badge 
+                                          key={index} 
+                                          variant="outline" 
+                                          className="text-xs bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                        >
+                                          {source}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* AI Thinking Process */}
+                                {message.thinking && (
+                                  <div className="pt-3 border-t border-gray-100">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setShowThinking(!showThinking)}
+                                      className="text-xs text-gray-500 hover:text-gray-700 p-0 h-auto"
                                     >
-                                      {source}
-                                    </Badge>
-                                  ))}
-                                </div>
+                                      <Brain className="h-3 w-3 mr-1" />
+                                      {showThinking ? 'Hide' : 'Show'} AI Thinking Process
+                                    </Button>
+                                    {showThinking && (
+                                      <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
+                                        <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono">
+                                          {message.thinking}
+                                        </pre>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {/* Smart Suggestions */}
+                                {message.suggestions && message.suggestions.length > 0 && (
+                                  <div className="pt-3 border-t border-gray-100">
+                                    <p className="text-xs text-gray-500 mb-2 font-medium">💡 Related Questions:</p>
+                                    <div className="space-y-1">
+                                      {message.suggestions.map((suggestion, index) => (
+                                        <Button
+                                          key={index}
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleSendMessage(suggestion)}
+                                          className="text-xs text-left justify-start h-auto p-2 w-full bg-gray-50 hover:bg-gray-100 text-gray-700"
+                                        >
+                                          <Lightbulb className="h-3 w-3 mr-2 flex-shrink-0" />
+                                          {suggestion}
+                                        </Button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                             
@@ -338,15 +433,21 @@ export default function AIAssistantPage() {
                       <div className="bg-white border border-gray-200 rounded-2xl p-4 max-w-[85%] shadow-sm">
                         <div className="flex items-center space-x-3">
                           <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                            <Bot className="h-4 w-4 text-white" />
+                            <Brain className="h-4 w-4 text-white animate-pulse" />
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <div className="flex space-x-1">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <div className="flex space-x-1">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                              </div>
+                              <span className="text-sm text-gray-600 font-medium">Analyzing your uploaded documents...</span>
                             </div>
-                            <span className="text-sm text-gray-600 font-medium">AI is analyzing your request...</span>
+                            <div className="text-xs text-gray-500 flex items-center space-x-2">
+                              <FileText className="h-3 w-3" />
+                              <span>Searching document content • RAG engine processing</span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -389,7 +490,7 @@ export default function AIAssistantPage() {
               </div>
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-gray-500">
-                  💡 Try: "Show compliance overview" or "What needs attention?"
+                  🧠 RAG-Powered: Ask me anything about VendorVault!
                 </p>
                 <p className="text-xs text-gray-400">
                   Press Enter to send • Shift+Enter for new line

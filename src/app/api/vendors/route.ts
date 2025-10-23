@@ -1,104 +1,104 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Create Supabase client for API routes with service role key
+function createSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createSupabaseClient();
     
-    // Get auth token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    let authUser = null;
+    console.log('🔍 Fetching vendors from database...');
     
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.replace('Bearer ', '');
-      try {
-        const { data: { user } } = await supabase.auth.getUser(token);
-        authUser = user;
-      } catch (error) {
-        console.error('Token validation failed:', error);
-      }
-    }
-    
-    // For development, we'll allow access without strict auth validation since we're using service role
-    // In production, you should enforce authentication more strictly
-    if (!authUser) {
-      console.log('No authenticated user found, but proceeding with service role access for development');
-    }
-
-    // Fetch vendors
+    // Try to fetch vendors from database
     const { data: vendors, error } = await supabase
       .from('vendors')
-      .select('*')
+      .select(`
+        id,
+        name,
+        contact_email,
+        category,
+        status,
+        created_at,
+        updated_at
+      `)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Database query failed:', error.message);
+      return NextResponse.json(
+        { error: 'Failed to fetch vendors from database. Please ensure the vendors table exists.' },
+        { status: 500 }
+      );
+    }
 
+    console.log(`✅ Found ${vendors?.length || 0} vendors`);
     return NextResponse.json({ vendors: vendors || [] });
 
   } catch (error) {
-    console.error('Vendors fetch error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to fetch vendors',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('❌ Vendors API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createSupabaseClient();
     
-    // Get auth token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    let authUser = null;
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.replace('Bearer ', '');
-      try {
-        const { data: { user } } = await supabase.auth.getUser(token);
-        authUser = user;
-      } catch (error) {
-        console.error('Token validation failed:', error);
-      }
-    }
-    
-    // For development, allow creation without strict auth (but log it)
-    if (!authUser) {
-      console.log('No authenticated user found for vendor creation, using default user ID');
-    }
-
+    // Parse request body
     const body = await request.json();
     const { name, contact_email, category, status } = body;
 
-    if (!name || !contact_email || !category) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    // Validate required fields
+    if (!name || !contact_email) {
+      return NextResponse.json(
+        { error: 'Missing required fields: name, contact_email' },
+        { status: 400 }
+      );
     }
 
-    // Create vendor
-    const { data: vendor, error } = await supabase
+    // Insert vendor into database
+    const { data: vendor, error: dbError } = await supabase
       .from('vendors')
       .insert({
         name,
         contact_email,
-        category,
-        status: status || 'active',
-        created_by: authUser?.id || '00000000-0000-0000-0000-000000000000', // fallback for development
+        category: category || 'Other',
+        status: status || 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
-      .select()
+      .select('*')
       .single();
 
-    if (error) throw error;
+    if (dbError) {
+      console.error('Database insert failed:', dbError.message);
+      return NextResponse.json(
+        { error: 'Failed to create vendor in database' },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json({ vendor });
+    console.log('✅ Vendor created:', vendor.name);
+    return NextResponse.json({ vendor }, { status: 201 });
 
   } catch (error) {
-    console.error('Vendor creation error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to create vendor',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('Vendors POST API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
